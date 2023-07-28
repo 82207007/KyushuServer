@@ -16,7 +16,15 @@ namespace KyushuServer
 		USER_REQUEST_VIEW_ROLE_PARA,			// 浏览角色
 		RETURN_USER_REQ_VIEW_ROLE_MSG,			// 反馈角色列表
 
-		USER_REQUSET_SET_ROLE_PARA,				// 设置角色 (添加、更新、删除)
+		USER_REQUSET_MANAGE_ROLE_PARA,			// 角色管理 (添加、更新、删除)
+		RETURN_USER_MANAGE_ROLE_MSG,			// 角色管理反馈
+
+		USER_REQUEST_VIEW_ACCOUNT_PARA,			// 浏览账户
+		RETURN_USER_REQ_VIEW_ACCOUNT_MSG,		// 反馈账户列表
+
+
+
+
 
 		USER_REQUEST_REG_ACCOUNT_PARA,			// 注册账户
 		RETURN_USER_REG_ACCOUNT_MSG,			// 注册反馈
@@ -82,6 +90,26 @@ namespace KyushuServer
 		EKEC_VIEW_ROLE_LIST_NOT,				// 查看列表异常 (网络异常或数据库查询失败)
 		EKEC_SET_ROLE_INFO_FAIL,				// 设置角色信息数据异常 (非法的提交类型)
 
+	};
+
+	// 错误代码: 内码
+	enum EKyushuErrorCode2
+	{
+		EKEC2_NULL,
+		EKEC2_DB_EXEC,				// 数据繁忙
+
+		EKEC2_ACCOUNT_EXISTS,		// 账户已存在
+		EKEC2_ACCOUNT_NOT,			// 账户不存在
+		EKEC2_ACCOUNT_STOP,			// 账户已停权
+		EKEC2_ACCOUNT_ONLINE,		// 账户已登录
+		EKEC2_ACCOUNT_NOT_ROLE,		// 账户未分配角色分组
+		EKEC2_ACCOUNT_LOGOUT,		// 账户已退出
+
+		EKEC2_ROLE_EXISTS,			// 角色已存在
+		EKEC2_ROLE_NOT,				// 角色不存在
+
+		EKEC2_PASSWORD_NOT,			// 密码不正确
+		EKEC2_UPDATE_FAIL,			// 数据更新失败
 	};
 
 
@@ -152,12 +180,11 @@ namespace KyushuServer
 
 		int16_t GetSubType() { return subtype; }
 
-		int16_t			subtype;				// 10001 = 普通登录
-		wchar_t			name[32];				// 账户
-		wchar_t			password[64];			// 密码
+		int16_t			subtype;				// e_msg_account_login_mode
+		wchar_t			name[32];				// 账户	(>=8)
+		wchar_t			password[64];			// 密码	(>=6)
 	};
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 登录成功
 	struct stServerReturnLoginSuccessCmd : public Msg
 	{
@@ -194,11 +221,11 @@ namespace KyushuServer
 			return;
 		};
 
-		int32_t page;
-		int32_t number;
+		int32_t page;							// 页码			(1)
+		int32_t number;							// 每页显示数量	(10)
 	};
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
+
 	// 反馈角色信息
 	struct _view_role_info
 	{
@@ -239,12 +266,12 @@ namespace KyushuServer
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 设置角色 (添加、更新、删除)
-	struct stUserRequestSetRoleCmd : public Msg
+	struct stUserRequestManageRoleCmd : public Msg
 	{
-		stUserRequestSetRoleCmd()
+		stUserRequestManageRoleCmd()
 		{
-			dwType = USER_REQUSET_SET_ROLE_PARA;
-			stLength = sizeof(stUserRequestSetRoleCmd);
+			dwType = USER_REQUSET_MANAGE_ROLE_PARA;
+			stLength = sizeof(stUserRequestManageRoleCmd);
 
 			subtype = 0;
 			sn = 0;
@@ -254,12 +281,97 @@ namespace KyushuServer
 			return;
 		};
 
-		int16_t				subtype;	// e_msg_role_add, e_msg_role_update
-		int64_t				sn;
-		wchar_t				name[32];
-		int64_t				xtgl;
-		int64_t				cgys;
+		int16_t				subtype;	// e_msg_role_add, e_msg_role_update, e_msg_role_delete
+		int64_t				sn;			// 创建时此值为0即可
+		wchar_t				name[32];	// 角色分组名	(>3)
+		int64_t				xtgl;		// 权限 系统管理
+		int64_t				cgys;		// 权限 仓储运输
 	};
+
+	// 反馈角色管理
+	struct stServerReturnManageRoleCmd : public Msg
+	{
+		stServerReturnManageRoleCmd()
+		{
+			dwType = RETURN_USER_MANAGE_ROLE_MSG;
+			stLength = sizeof(stServerReturnManageRoleCmd);
+
+			state = false;
+			errcode = 0;
+			memset(text, 0, sizeof(text));
+			return;
+		};
+
+		bool_t				state;		// 状态 1=成功 0=失败
+		int32_t				errcode;	// 错误代码
+		wchar_t				text[128];	// 附加字符串
+	};
+
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 查看角色
+	struct stUserRequestViewAccountCmd : public Msg
+	{
+		stUserRequestViewAccountCmd()
+		{
+			dwType = USER_REQUEST_VIEW_ACCOUNT_PARA;
+			stLength = sizeof(stUserRequestViewAccountCmd);
+
+			page = 0;
+			number = 0;
+			return;
+		};
+
+		int32_t page;							// 页码			(1)
+		int32_t number;							// 每页显示数量	(10)
+	};
+
+
+	// 反馈角色信息
+	struct _view_account_info
+	{
+		_view_account_info()
+		{
+			sn = 0; r_sn = 0;
+			state = false; online = false;
+			memset(name, 0, sizeof(name));
+			memset(nickname, 0, sizeof(nickname));
+			return;
+			return;
+		};
+
+		int64_t		sn;				// UID
+		wchar_t		name[32];		// 账户
+		wchar_t		nickname[64];	// 名称
+		int64_t		r_sn;			// 角色 UID
+		int16_t		state;			// 状态
+		int64_t		online;			// 是否在线
+	};
+
+	struct stServerReturnViewAccountCmd : public Msg
+	{
+		stServerReturnViewAccountCmd()
+		{
+			dwType = RETURN_USER_REQ_VIEW_ACCOUNT_MSG;
+			stLength = sizeof(stServerReturnViewAccountCmd);
+
+			subtype = 0;
+			index = 0;
+			dataarray = nullptr;
+			return;
+		};
+
+		int16_t				subtype;	// 子类型
+		uint32_t			index;		// 位置
+		int32_t				count;		// 数据数量 (如果可能则为实际数量, 此值可能为空)
+		_view_account_info*	dataarray;	// 数据实体
+	};
+
+
+
+
+
+
+
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 创建账户反馈

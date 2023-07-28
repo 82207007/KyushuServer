@@ -42,9 +42,6 @@ void_t loadServerDefaultConfig()
 };
 
 
-#include "CNetworkDefault.h"
-#pragma warning(disable : 4996)
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 int32_t main()
 {
@@ -55,13 +52,7 @@ int32_t main()
 	{
 		if (false == theServer->ServerStart())
 			return 0;
-
-		stUserRequestLoginCmd cmd;
-		cmd.subtype = 10001;
-		strcpy(cmd.name, "82207007");
-		strcpy(cmd.password, "qq2691351");
-		//theServer->SendMsg(nullptr, &cmd);
-
+		
 
 		char_t command[1024] = { NULL };
 		while (true)

@@ -17,7 +17,7 @@ CKyushuServer::~CKyushuServer()
 
 void_t CKyushuServer::OnAcceptCompletion(HANDLE hConnHandler, const char_t* ip)
 {
-#ifdef _DEBUG
+#ifdef ThreadEvent
 	PrintLog("UserConnect: %s\n", ip);
 
 #endif
@@ -27,7 +27,7 @@ void_t CKyushuServer::OnAcceptCompletion(HANDLE hConnHandler, const char_t* ip)
 
 void_t CKyushuServer::OnRecvCompletion(void_t* data, int32_t datalen)
 {
-#ifdef _DEBUG
+#ifdef ThreadEvent
 	PrintLog("UserData: %X[%d]\n", data, datalen);
 
 #endif
@@ -37,7 +37,7 @@ void_t CKyushuServer::OnRecvCompletion(void_t* data, int32_t datalen)
 
 void_t CKyushuServer::OnCloseCompletion(HANDLE hConnHandler)
 {
-#ifdef _DEBUG
+#ifdef ThreadEvent
 	PrintLog("UserClose: %X[%d]\n", hConnHandler);
 
 #endif

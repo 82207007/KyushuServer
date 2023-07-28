@@ -343,8 +343,8 @@ namespace KyushuServer
 		wchar_t		name[32];		// 账户
 		wchar_t		nickname[64];	// 名称
 		int64_t		r_sn;			// 角色 UID
-		int16_t		state;			// 状态
-		int64_t		online;			// 是否在线
+		int16_t		state;			// 状态		0=禁用, 1=启用
+		int64_t		online;			// 是否在线	0=离线，否则为在线
 	};
 
 	struct stServerReturnViewAccountCmd : public Msg

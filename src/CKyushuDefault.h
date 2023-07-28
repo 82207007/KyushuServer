@@ -15,14 +15,13 @@ namespace KyushuServer
 
 		USER_REQUEST_VIEW_ROLE_PARA,			// 浏览角色
 		RETURN_USER_REQ_VIEW_ROLE_MSG,			// 反馈角色列表
-
 		USER_REQUSET_MANAGE_ROLE_PARA,			// 角色管理 (添加、更新、删除)
 		RETURN_USER_MANAGE_ROLE_MSG,			// 角色管理反馈
 
 		USER_REQUEST_VIEW_ACCOUNT_PARA,			// 浏览账户
 		RETURN_USER_REQ_VIEW_ACCOUNT_MSG,		// 反馈账户列表
-
-
+		USER_REQUSET_MANAGE_ACCOUNT_PARA,		// 账户管理 (添加、更新、删除)
+		RETURN_USER_MANAGE_ACCOUNT_MSG,			// 账户管理反馈
 
 
 
@@ -43,6 +42,12 @@ namespace KyushuServer
 		e_msg_role_add,
 		e_msg_role_update,
 		e_msg_role_delete,
+
+		// 账户
+		e_msg_account_add,
+		e_msg_account_update,
+		e_msg_account_update2,
+		e_msg_account_delete,
 	};
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,8 +67,8 @@ namespace KyushuServer
 		msgflag_compress	= 0x01,				// 压缩标志
 		msgflag_encrypt		= 0x01 << 1,		// 加密标志
 	};
-#pragma pack(push, 1)
 
+	KyushuEventBegin
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	enum EKyushuErrorCode
 	{
@@ -85,11 +90,13 @@ namespace KyushuServer
 		EKEC_AUTH_NOT,							// 没有权限
 
 		EKEC_UID_FAIL,							// UID 异常
-		EKEC_NAME_LEN_FAIL,						// 名称尺寸不正确
+		EKEC_STRING_LEN_FAIL,					// 字符串尺寸不正确
 
 		EKEC_VIEW_ROLE_LIST_NOT,				// 查看列表异常 (网络异常或数据库查询失败)
 		EKEC_SET_ROLE_INFO_FAIL,				// 设置角色信息数据异常 (非法的提交类型)
 
+
+		EKEC_SET_ACCOUNT_INFO_FAIL,				// 同角色
 	};
 
 	// 错误代码: 内码
@@ -281,6 +288,14 @@ namespace KyushuServer
 			return;
 		};
 
+		/*
+		* 创建:
+		*	sn=0; name=val; xtgl=val; cgys=val;
+		* 更新:
+		*	sn=val; 其他同上
+		* 删除
+		*	sn=val;	其他可以为空
+		*/
 		int16_t				subtype;	// e_msg_role_add, e_msg_role_update, e_msg_role_delete
 		int64_t				sn;			// 创建时此值为0即可
 		wchar_t				name[32];	// 角色分组名	(>3)
@@ -308,7 +323,7 @@ namespace KyushuServer
 	};
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 查看角色
+	// 查看账户
 	struct stUserRequestViewAccountCmd : public Msg
 	{
 		stUserRequestViewAccountCmd()
@@ -326,7 +341,7 @@ namespace KyushuServer
 	};
 
 
-	// 反馈角色信息
+	// 反馈账户信息
 	struct _view_account_info
 	{
 		_view_account_info()
@@ -364,6 +379,63 @@ namespace KyushuServer
 		uint32_t			index;		// 位置
 		int32_t				count;		// 数据数量 (如果可能则为实际数量, 此值可能为空)
 		_view_account_info*	dataarray;	// 数据实体
+	};
+
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 设置账户 (添加、更新、删除)
+	struct stUserRequestManageAccountCmd : public Msg
+	{
+		stUserRequestManageAccountCmd()
+		{
+			dwType = USER_REQUSET_MANAGE_ACCOUNT_PARA;
+			stLength = sizeof(stUserRequestManageAccountCmd);
+
+			subtype = 0;
+			sn = 0;
+			r_sn = 0;
+			state = 0;
+			memset(name, 0, sizeof(name));
+			memset(pwd, 0, sizeof(pwd));
+			memset(nickname, 0, sizeof(nickname));
+			return;
+		};
+
+		/*
+		* 创建:
+		*	sn=0; name=val; r_sn=val(可=0但不建议); pwd=val; nickname=val; state=val;
+		* 更新1(同时强制更新密码):
+		*	sn=val; 其他同上
+		* 更新2(密码不会更新):
+		*	sn=val; 其他同上; pwd=可以为空;
+		* 删除
+		*	sn=val;	其他可以为空
+		*/
+		int16_t				subtype;		// e_msg_account_add, e_msg_account_update, e_msg_account_update2, e_msg_account_delete
+		int64_t				sn;				// 创建时此值为0即可
+		wchar_t				name[32];		// 非创建时此值可以为空
+		int64_t				r_sn;			// 角色 UID (绑定角色分组)
+		wchar_t				pwd[64];		// 密码 (必要时需要) (>=6)
+		wchar_t				nickname[64];	// 姓名 (>3)
+		int16_t				state;			// 0=停用 1=启用
+	};
+
+	// 反馈账户管理
+	struct stServerReturnManageAccountCmd : public Msg
+	{
+		stServerReturnManageAccountCmd()
+		{
+			dwType = RETURN_USER_MANAGE_ACCOUNT_MSG;
+			stLength = sizeof(stServerReturnManageAccountCmd);
+
+			state = false;
+			errcode = 0;
+			memset(text, 0, sizeof(text));
+			return;
+		};
+
+		bool_t				state;		// 状态 1=成功 0=失败
+		int32_t				errcode;	// 错误代码
+		wchar_t				text[128];	// 附加字符串
 	};
 
 
@@ -408,7 +480,6 @@ namespace KyushuServer
 		AUTH_SYS_ACCOUNT,			// 操作员设置
 	};
 #define CheckUserSysAuth(n)				GetValueBit(m_user_info.r_xtgl, n)
-
-
-#pragma pack(pop)
+	
+	KyushuEventEnd
 };

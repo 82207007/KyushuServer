@@ -52,7 +52,6 @@ int32_t main()
 	{
 		if (false == theServer->ServerStart())
 			return 0;
-		
 
 		char_t command[1024] = { NULL };
 		while (true)

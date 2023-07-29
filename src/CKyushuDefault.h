@@ -446,7 +446,7 @@ namespace KyushuServer
 		AUTH_SYS_ROLE,				// 角色设置
 		AUTH_SYS_ACCOUNT,			// 操作员设置
 	};
-#define CheckUserSysAuth(n)				GetValueBit(m_user_info.r_xtgl, n)
+#define CheckUserSysAuth(n)			GetValueBit(m_user_info.r_xtgl, n)
 	
 	KyushuEventEnd
 };

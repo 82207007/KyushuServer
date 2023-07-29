@@ -2,12 +2,6 @@
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class CClientSession;
-namespace KyushuServer
-{
-	struct Msg;
-};
-
 class CKyushuServer
 {
 public:
@@ -22,9 +16,6 @@ protected:
 	void_t					OnAcceptCompletion(HANDLE hConnHandler, const char_t* ip);
 	void_t					OnRecvCompletion(void_t* data, int32_t datalen);
 	void_t					OnCloseCompletion(HANDLE hConnHandler);
-
-public:
-	virtual bool_t			SendMsg(CClientSession* client, KyushuServer::Msg* cpMsg) = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

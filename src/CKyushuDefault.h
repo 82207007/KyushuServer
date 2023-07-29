@@ -23,11 +23,6 @@ namespace KyushuServer
 		USER_REQUSET_MANAGE_ACCOUNT_PARA,		// 账户管理 (添加、更新、删除)
 		RETURN_USER_MANAGE_ACCOUNT_MSG,			// 账户管理反馈
 
-
-
-		USER_REQUEST_REG_ACCOUNT_PARA,			// 注册账户
-		RETURN_USER_REG_ACCOUNT_MSG,			// 注册反馈
-
 		MSG_END
 	};
 
@@ -438,34 +433,6 @@ namespace KyushuServer
 		wchar_t				text[128];	// 附加字符串
 	};
 
-
-
-
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 创建账户反馈
-	struct stServerReturnReqAccountCmd : public Msg
-	{
-		stServerReturnReqAccountCmd()
-		{
-			dwType = RETURN_USER_REG_ACCOUNT_MSG;
-			stLength = sizeof(stServerReturnReqAccountCmd);
-
-			uid = 0;
-			memset(username, 0, sizeof(username));
-			memset(nickname, 0, sizeof(nickname));
-			return;
-		};
-
-		int16_t			state;					// 0=失败 1=成功
-		int64_t			uid;					// UID
-		wchar_t			username[32];			// 账户
-		wchar_t			nickname[64];			// 姓名
-	};
-	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 权限检查

@@ -34,7 +34,7 @@ namespace KyushuServer
 	enum KyushuSubMsgType
 	{
 		// 登录方式
-		e_msg_account_login_mode	= 10001,	// 账户密码
+		e_msg_account_login_mode = 10001,	// 账户密码
 
 		// 角色
 		e_msg_role_add,
@@ -52,8 +52,15 @@ namespace KyushuServer
 
 
 		// 采购运输 子类型
+		e_msg_cgys_status,					// 状态
 		e_msg_cgys_create,					// 新的采购单
+		e_msg_cgys_loading,					// 装货 
+		e_msg_cgys_unloading,				// 卸货
+		e_msg_cgys_chargeback,				// 退单
+		e_msg_cgys_destroy,					// 销毁
 		e_msg_cgys_view_all,				// 查询
+		e_msg_cgys_view_uid,				// 查询 sn
+		e_msg_cgys_view_tid,				// 查询 票号
 	};
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,7 +114,7 @@ namespace KyushuServer
 		EKEC_DATA_INVALID,						// 提交的数据异常 (缺少必要数据或必要数据为空)
 		EKEC_UID_SERVER_BUSY,					// UID 服务器繁忙, 重新请求即可。
 		EKEC_DATA_SERVER_BUSY,					// 数据 服务器网络繁忙，重新请求即可。
-		//EKEC_TIME_INVALID,						// 未知的时间格式
+		EKEC_TIME_INVALID,						// 未知的时间格式
 	};
 
 	// 错误代码: 内码
@@ -514,6 +521,65 @@ namespace KyushuServer
 		wchar_t			notes[200];			// 备注
 	};
 
+	struct _cgys_submit_loading
+	{
+		_cgys_submit_loading()
+		{
+			memset(this, 0, sizeof(_cgys_submit_loading));
+			return;
+		};
+		
+		// 参考 _cgys_return_data_view_info
+		int64_t			sn;					// 采购 UID
+		wchar_t			carnumber[20];		// 车牌号
+		int32_t			number;				// 数量
+		wchar_t			location[120];		// 地点
+		wchar_t			locate[32];			// GPS
+		wchar_t			image1[80];			// 照片1
+		wchar_t			image2[80];			// 照片2
+		wchar_t			notes[200];			// 备注
+	};
+
+	struct _cgys_submit_unloading
+	{
+		_cgys_submit_unloading()
+		{
+			memset(this, 0, sizeof(_cgys_submit_unloading));
+			return;
+		};
+
+		int64_t			sn;					// 采购 UID
+		wchar_t			location[120];		// 地点
+		wchar_t			locate[32];			// GPS
+		wchar_t			image1[80];			// 照片1
+		wchar_t			image2[80];			// 照片2
+		float_t			totalprice;			// 总额
+	};
+
+	struct _cgys_submit_chargeback
+	{
+		_cgys_submit_chargeback()
+		{
+			memset(this, 0, sizeof(_cgys_submit_chargeback));
+			return;
+		};
+
+		// 参考 _cgys_return_data_view_info
+		int64_t			sn;					// 采购 UID
+		wchar_t			carnumber[20];		// 车牌号
+	};
+
+	struct _cgys_submit_destroy
+	{
+		_cgys_submit_destroy()
+		{
+			memset(this, 0, sizeof(_cgys_submit_destroy));
+			return;
+		};
+
+		int64_t			sn;					// 采购 UID
+	};
+
 	struct _cgys_submit_document_view_all
 	{
 		_cgys_submit_document_view_all()
@@ -521,18 +587,41 @@ namespace KyushuServer
 			mode = 0;
 			pageindex = 0; pagenumber = 0;
 			status = 0;
-			
+
 			timeend.reset();
 			timebegin.reset();
 			return;
 		};
 
-		int32_t			mode;
-		int32_t			pageindex;
-		int32_t			pagenumber;
-		int32_t			status;
-		TIMESTAMP		timebegin;
-		TIMESTAMP		timeend;
+		int32_t			mode;			// 0=无,1=状态,2=时间,3=状态+时间
+		int32_t			pageindex;		// 页码 (>0)
+		int32_t			pagenumber;		// 数量 (>5 && <100)
+		int32_t			status;			// 参考 _cgys_return_data_view_info
+		TIMESTAMP		timebegin;		// 起始时间
+		TIMESTAMP		timeend;		// 结束时间
+	};
+
+
+	struct _cgys_submit_document_view_uid
+	{
+		_cgys_submit_document_view_uid()
+		{
+			sn = 0;
+			return;
+		};
+
+		int64_t			sn;
+	};
+
+	struct _cgys_submit_document_view_tid
+	{
+		_cgys_submit_document_view_tid()
+		{
+			memset(this, 0, sizeof(_cgys_submit_document_view_tid));
+			return;
+		};
+
+		wchar_t			ticketnumber[32];	// 票号
 	};
 
 	// 请求结构
@@ -550,16 +639,85 @@ namespace KyushuServer
 		int16_t							subtype;			// 控制码
 		uint32_t						index;				// 位置
 
+		// 联合结构体
 #ifdef _union_struct
 #if e_msg_cgys_create
 		_cgys_submit_document			data;
+#elif e_msg_cgys_loading
+		_cgys_submit_loading			data;
+#elif e_msg_cgys_unloading
+		_cgys_submit_unloading			data;
+#elif e_msg_cgys_chargeback
+		_cgys_submit_chargeback			data;
+#elif e_msg_cgys_destroy
+		_cgys_submit_destroy			data;
 #elif e_msg_cgys_view_all
 		_cgys_submit_document_view_all	data;
+#elif e_msg_cgys_view_uid
+		_cgys_submit_document_view_uid	data;
+#elif e_msg_cgys_view_tid
+		_cgys_submit_document_view_tid	data;
 #endif
 #endif		
 	};
 
 	// 采购运输 反馈
+	struct _cgys_return_status_info
+	{
+		_cgys_return_status_info()
+		{
+			memset(this, 0, sizeof(_cgys_return_status_info));
+		};
+
+		bool_t				state;		// 状态 1=成功 0=失败
+		int32_t				errcode;	// 错误代码
+		wchar_t				text[128];	// 附加字符串
+	};
+
+	struct _cgys_return_data_view_info
+	{
+		_cgys_return_data_view_info()
+		{
+			memset(this, 0, sizeof(_cgys_return_data_view_info));
+			return;
+		};
+
+		int64_t			sn;					// UID			采购单
+		int64_t			a_sn;				// UID			账户
+		int32_t			status;				// 状态			0=停用(退单),1=填单,2=装车,3=卸车
+		wchar_t			ticketnumber[32];	// 票号			(>8)
+		wchar_t			supplier[120];		// 供货商		
+		wchar_t			supplierphone[32];	// 供货商电话
+		wchar_t			classify[10];		// 分类
+		float_t			unitprice;			// 单价
+		wchar_t			unit[10];			// 单位
+		wchar_t			notes1[200];		// 备注
+		TIMESTAMP		createtime;			// 创建时间
+
+		float_t			totalprice;			// 总价
+
+		wchar_t			carnumber[20];		// 车牌号		(>3)
+		int32_t			number;				// 数量			(>0)
+
+		struct tempdata
+		{
+			tempdata()
+			{
+				memset(this, 0, sizeof(tempdata));
+				return;
+			};
+
+			wchar_t		location[120];		// 地点		(>3)
+			wchar_t		locate[32];			// GPS		(>8)
+			wchar_t		image1[80];			// 照片1		(>5)
+			wchar_t		image2[80];			// 照片2		(>5)
+		};
+		tempdata		planinfo[2];		// 进度数据
+		wchar_t			notes2[200];		// 备注
+		TIMESTAMP		begintime;			// 接取时间
+		TIMESTAMP		endtime;			// 完成时间
+	};
+
 	struct stServerReturnCgysManagerCmd : public Msg
 	{
 		stServerReturnCgysManagerCmd()
@@ -567,15 +725,38 @@ namespace KyushuServer
 			dwType = RETURN_USER_CGYS_MSG;
 			stLength = sizeof(stServerReturnCgysManagerCmd);
 
-			state = false;
-			errcode = 0;
-			memset(text, 0, sizeof(text));
+			subtype = 0;
+			index = 0;
 			return;
 		};
 
-		bool_t				state;		// 状态 1=成功 0=失败
-		int32_t				errcode;	// 错误代码
-		wchar_t				text[128];	// 附加字符串
+		int16_t							subtype;			// 控制码
+		uint32_t						index;				// 位置
+
+
+		// 联合结构体
+#ifdef _union_struct
+#if e_msg_cgys_create
+		_cgys_return_status_info		data;
+#elif e_msg_cgys_loading
+		_cgys_return_status_info		data;
+#elif e_msg_cgys_unloading
+		_cgys_return_status_info		data;
+#elif e_msg_cgys_chargeback
+		_cgys_return_status_info		data;
+#elif e_msg_cgys_destroy
+		_cgys_return_status_info		data;
+#elif e_msg_cgys_view_all
+		int32_t							count;
+		_cgys_return_data_view_info		data;
+#elif e_msg_cgys_view_uid
+		int32_t							count;
+		_cgys_return_data_view_info		data;
+#elif e_msg_cgys_view_tid
+		int32_t							count;
+		_cgys_return_data_view_info		data;
+#endif
+#endif
 	};
 
 

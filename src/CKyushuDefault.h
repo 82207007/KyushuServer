@@ -26,6 +26,9 @@ namespace KyushuServer
 		USER_REQUEST_CGYS_PARA,					// 采购运输
 		RETURN_USER_CGYS_MSG,					// 采购运输 反馈
 
+		USER_REQUEST_CGYS_DEBT_PARA,			// 采购运输 借款
+		RETURN_USER_CGYS_DEBT_MSG,				// 采购运输 借款 反馈
+
 		MSG_END
 	};
 
@@ -61,6 +64,16 @@ namespace KyushuServer
 		e_msg_cgys_view_all,				// 查询
 		e_msg_cgys_view_uid,				// 查询 sn
 		e_msg_cgys_view_tid,				// 查询 票号
+
+		// 采购运输 借/还款 子类型
+		e_msg_cgys_jk_status,
+		e_msg_cgys_jk_create,
+		e_msg_cgys_jk_ratify,
+		e_msg_cgys_jk_overy,
+		e_msg_cgys_jk_chargeback,
+		e_msg_cgys_jk_view_all,
+		e_msg_cgys_jk_view_name,
+		e_msg_cgys_jk_view_uid,
 	};
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,6 +128,9 @@ namespace KyushuServer
 		EKEC_UID_SERVER_BUSY,					// UID 服务器繁忙, 重新请求即可。
 		EKEC_DATA_SERVER_BUSY,					// 数据 服务器网络繁忙，重新请求即可。
 		EKEC_TIME_INVALID,						// 未知的时间格式
+
+		EKEC_INVALID_COMMID,					// 未知的指令
+		EKEC_INVALID_CONTROLID,					// 未知的控制码
 	};
 
 	// 错误代码: 内码
@@ -139,6 +155,8 @@ namespace KyushuServer
 
 		// 采购运输
 		EKEC2_UID_TICKET_EXISTS,	// 已经存在相同单据
+		EKEC2_UID_STATUS_INVALID,	// 当前单据不存在或者单据状态已不符合要求
+		EKEC2_SUB_COMMID_INVALID,	// 未知的命令
 	};
 
 
@@ -532,7 +550,7 @@ namespace KyushuServer
 		// 参考 _cgys_return_data_view_info
 		int64_t			sn;					// 采购 UID
 		wchar_t			carnumber[20];		// 车牌号
-		int32_t			number;				// 数量
+		float_t			number;				// 数量
 		wchar_t			location[120];		// 地点
 		wchar_t			locate[32];			// GPS
 		wchar_t			image1[80];			// 照片1
@@ -697,7 +715,7 @@ namespace KyushuServer
 		float_t			totalprice;			// 总价
 
 		wchar_t			carnumber[20];		// 车牌号		(>3)
-		int32_t			number;				// 数量			(>0)
+		float_t			number;				// 数量			(>0)
 
 		struct tempdata
 		{
@@ -759,6 +777,228 @@ namespace KyushuServer
 #endif
 	};
 
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 采购运输 借/还款
+	struct _cgys_jk_submit_document
+	{
+		_cgys_jk_submit_document()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_document));
+			return;
+		};
+
+		int64_t			sn;					// 保留 (借款 UID)
+		int64_t			a_sn;				// 保留 (账户 UID)
+		int32_t			autoratify;			// 自动审批 (预留)
+		wchar_t			name[64];			// 借款人
+		wchar_t			purpose[120];		// 事由/用途
+		float_t			amount;				// 借款金额
+		wchar_t			method[10];			// 收款方式
+		wchar_t			card[30];			// 卡号
+		wchar_t			notes[200];			// 备注
+	};
+
+	struct _cgys_jk_submit_ratify
+	{
+		_cgys_jk_submit_ratify()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_ratify));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+		int32_t			ratify;				// 审批, 1=同意 0=拒绝
+	};
+
+	struct _cgys_jk_submit_overy
+	{
+		_cgys_jk_submit_overy()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_overy));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+		wchar_t			name[64];			// 收款人
+		float_t			amount;				// 收款金额
+		wchar_t			method[10];			// 收款方式
+		wchar_t			card[30];			// 卡号
+	};
+
+	struct _cgys_jk_submit_chargeback
+	{
+		_cgys_jk_submit_chargeback()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_chargeback));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+	};
+
+	struct _cgys_jk_submit_view_all
+	{
+		_cgys_jk_submit_view_all()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_view_all));
+
+			timeend.reset();
+			timebegin.reset();
+			return;
+		};
+
+		int32_t			mode;			// 0=无,1=状态,2=时间,3=状态+时间
+		int32_t			pageindex;		// 页码 (>0)
+		int32_t			pagenumber;		// 数量 (>5 && <100)
+		int32_t			status;			// 参考 _cgys_return_data_view_info
+		TIMESTAMP		timebegin;		// 起始时间
+		TIMESTAMP		timeend;		// 结束时间
+	};
+
+	struct _cgys_jk_submit_view_name
+	{
+		_cgys_jk_submit_view_name()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_view_name));
+
+			timeend.reset();
+			timebegin.reset();
+			return;
+		};
+
+		wchar_t			name[64];		// 借款人
+		int32_t			mode;			// 0=无,1=状态,2=时间,3=状态+时间
+		int32_t			pageindex;		// 页码 (>0)
+		int32_t			pagenumber;		// 数量 (>5 && <100)
+		int32_t			status;			// 参考 _cgys_return_data_view_info
+		TIMESTAMP		timebegin;		// 起始时间
+		TIMESTAMP		timeend;		// 结束时间
+	};
+
+	struct _cgys_jk_submit_view_sn
+	{
+		_cgys_jk_submit_view_sn()
+		{
+			memset(this, 0, sizeof(_cgys_jk_submit_view_sn));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+	};
+
+	// 请求结构
+	struct stUserRequestCgysDebtManagerCmd : public Msg
+	{
+		stUserRequestCgysDebtManagerCmd()
+		{
+			dwType = USER_REQUEST_CGYS_DEBT_PARA;
+			stLength = sizeof(stUserRequestCgysDebtManagerCmd);
+
+			subtype = 0;
+			return;
+		};
+
+		int16_t							subtype;			// 控制码
+		uint32_t						index;				// 位置
+
+		// 联合结构体
+#ifdef _union_struct
+#if e_msg_cgys_jk_create
+		_cgys_jk_submit_document		data;
+#elif e_msg_cgys_jk_ratify
+		_cgys_jk_submit_ratify			data;
+#elif e_msg_cgys_jk_overy
+		_cgys_jk_submit_overy			data;
+#elif e_msg_cgys_jk_chargeback
+		_cgys_jk_submit_chargeback		data;
+#elif e_msg_cgys_jk_view_all
+		_cgys_jk_submit_view_all		data;
+#elif e_msg_cgys_jk_view_name
+		_cgys_jk_submit_view_name		data;
+#elif e_msg_cgys_jk_view_uid
+		_cgys_jk_submit_view_sn			data;
+#endif
+#endif		
+	};
+
+	// 采购运输 借款 反馈
+	struct _cgys_jk_return_status_info
+	{
+		_cgys_jk_return_status_info()
+		{
+			memset(this, 0, sizeof(_cgys_jk_return_status_info));
+		};
+
+		bool_t				state;		// 状态 1=成功 0=失败
+		int32_t				errcode;	// 错误代码
+		wchar_t				text[128];	// 附加字符串
+	};
+
+	struct _cgys_jk_return_data_view_info
+	{
+		_cgys_jk_return_data_view_info()
+		{
+			memset(this, 0, sizeof(_cgys_jk_return_data_view_info));
+			return;
+		};
+
+		int64_t			sn;					// UID			采购单
+		int64_t			link_sn;			// UID			关联信息
+		int64_t			a_sn;				// UID			账户
+		int32_t			status;				// 状态			0=停用/退单;1=借款申请;2=同意;3=拒绝;4=还款完成
+		wchar_t			name[32];			// 借款人
+		wchar_t			purpose[120];		// 用途/事由	
+		float_t			amount;				// 借款金额
+		wchar_t			method1[32];		// 借款方式
+		wchar_t			card1[10];			// 卡号
+		wchar_t			notes[200];			// 备注
+		TIMESTAMP		createtime;			// 借款时间
+
+		wchar_t			method2[32];		// 还款方式
+		wchar_t			nickname[32];		// 收款名称
+		wchar_t			card2[10];			// 收款卡号
+		float_t			amount2;			// 收款金额
+		TIMESTAMP		closetime;			// 还款时间
+	};
+
+	struct stServerReturnCgysDebtManagerCmd : public Msg
+	{
+		stServerReturnCgysDebtManagerCmd()
+		{
+			dwType = RETURN_USER_CGYS_DEBT_MSG;
+			stLength = sizeof(stServerReturnCgysDebtManagerCmd);
+
+			subtype = 0;
+			index = 0;
+			return;
+		};
+
+		int16_t							subtype;			// 控制码
+		uint32_t						index;				// 位置
+
+		// 联合结构体
+#ifdef _union_struct
+#if	  e_msg_cgys_jk_status
+		_cgys_jk_return_status_info		data;
+#elif e_msg_cgys_jk_create
+		_cgys_jk_submit_document		data;
+#elif e_msg_cgys_jk_ratify
+		_cgys_jk_submit_ratify			data;
+#elif e_msg_cgys_jk_overy
+		_cgys_jk_submit_overy			data;
+#elif e_msg_cgys_jk_chargeback
+		_cgys_jk_submit_chargeback		data;
+#elif e_msg_cgys_jk_view_all
+		_cgys_jk_submit_view_all		data;
+#elif e_msg_cgys_jk_view_name
+		_cgys_jk_submit_view_name		data;
+#elif e_msg_cgys_jk_view_uid
+		_cgys_jk_submit_view_sn			data;
+#endif
+#endif
+	};
+
+
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 权限检查
@@ -779,6 +1019,8 @@ namespace KyushuServer
 	{
 		AUTH_CGYS_R,			// 采购运输 查看
 		AUTH_CGYS_W,			// 采购运输 使用
+		AUTH_CGYS_JK_R,			// 采购运输 借/还款 查看
+		AUTH_CGYS_JK_W,			// 采购运输 借/还款 使用
 	};
 #define CheckUserCgysAuth(n)			GetValueBit(m_user_info.r_cgys, n)
 

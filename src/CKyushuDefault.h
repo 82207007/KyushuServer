@@ -29,6 +29,9 @@ namespace KyushuServer
 		USER_REQUEST_CGYS_DEBT_PARA,			// 采购运输 借款
 		RETURN_USER_CGYS_DEBT_MSG,				// 采购运输 借款 反馈
 
+		USER_REQUEST_CGYS_ROUTINE_PARA,			// 采购运输 报销
+		RETURN_USER_CGYS_ROUTINE_MSG,			// 采购运输 报销 反馈
+
 		MSG_END
 	};
 
@@ -66,14 +69,23 @@ namespace KyushuServer
 		e_msg_cgys_view_tid,				// 查询 票号
 
 		// 采购运输 借/还款 子类型
-		e_msg_cgys_jk_status,
-		e_msg_cgys_jk_create,
-		e_msg_cgys_jk_ratify,
-		e_msg_cgys_jk_overy,
-		e_msg_cgys_jk_chargeback,
-		e_msg_cgys_jk_view_all,
-		e_msg_cgys_jk_view_name,
-		e_msg_cgys_jk_view_uid,
+		e_msg_cgys_jk_status,				// 状态
+		e_msg_cgys_jk_create,				// 申请
+		e_msg_cgys_jk_ratify,				// 审批
+		e_msg_cgys_jk_overy,				// 还款
+		e_msg_cgys_jk_chargeback,			// 退单 (借款人)
+		e_msg_cgys_jk_view_all,				// 模糊查询 全部
+		e_msg_cgys_jk_view_name,			// 模糊查询 全部 (按名称)
+		e_msg_cgys_jk_view_uid,				// 精确查询 UID
+
+		// 采购运输 报销 子类型 (同上)
+		e_msg_cgys_bx_status,
+		e_msg_cgys_bx_create,
+		e_msg_cgys_bx_ratify,
+		e_msg_cgys_bx_chargeback,
+		e_msg_cgys_bx_view_all,
+		e_msg_cgys_bx_view_name,
+		e_msg_cgys_bx_view_uid,
 	};
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -946,7 +958,7 @@ namespace KyushuServer
 		int64_t			link_sn;			// UID			关联信息
 		int64_t			a_sn;				// UID			账户
 		int32_t			status;				// 状态			0=停用/退单;1=借款申请;2=同意;3=拒绝;4=还款完成
-		wchar_t			name[32];			// 借款人
+		wchar_t			name[64];			// 借款人
 		wchar_t			purpose[120];		// 用途/事由	
 		float_t			amount;				// 借款金额
 		wchar_t			method1[32];		// 借款方式
@@ -999,6 +1011,201 @@ namespace KyushuServer
 	};
 
 
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// 采购运输 报销
+	struct _cgys_bx_submit_document
+	{
+		_cgys_bx_submit_document()
+		{
+			memset(this, 0, sizeof(_cgys_bx_submit_document));
+			return;
+		};
+
+		int64_t			sn;					// 保留 (借款 UID)
+		int64_t			a_sn;				// 保留 (账户 UID)
+		int32_t			autoratify;			// 自动审批 (预留)
+		wchar_t			name[64];			// 报销人
+		wchar_t			method[10];			// 类目
+		wchar_t			excerpt[30];		// 摘要
+		float_t			amount;				// 金额
+		wchar_t			notes[200];			// 备注
+	};
+
+	struct _cgys_bx_submit_ratify
+	{
+		_cgys_bx_submit_ratify()
+		{
+			memset(this, 0, sizeof(_cgys_bx_submit_ratify));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+		int32_t			ratify;				// 审批, 1=同意 0=拒绝
+	};
+
+	struct _cgys_bx_submit_chargeback
+	{
+		_cgys_bx_submit_chargeback()
+		{
+			memset(this, 0, sizeof(_cgys_bx_submit_chargeback));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+	};
+
+	struct _cgys_bx_submit_view_all
+	{
+		_cgys_bx_submit_view_all()
+		{
+			memset(this, 0, sizeof(_cgys_bx_submit_view_all));
+
+			timeend.reset();
+			timebegin.reset();
+			return;
+		};
+
+		int32_t			mode;			// 0=无,1=状态,2=时间,3=状态+时间
+		int32_t			pageindex;		// 页码 (>0)
+		int32_t			pagenumber;		// 数量 (>5 && <100)
+		int32_t			status;			// 参考 _cgys_return_data_view_info
+		TIMESTAMP		timebegin;		// 起始时间
+		TIMESTAMP		timeend;		// 结束时间
+	};
+
+	struct _cgys_bx_submit_view_name
+	{
+		_cgys_bx_submit_view_name()
+		{
+			memset(this, 0, sizeof(_cgys_bx_submit_view_name));
+
+			timeend.reset();
+			timebegin.reset();
+			return;
+		};
+
+		wchar_t			name[64];		// 报销人
+		int32_t			mode;			// 0=无,1=状态,2=时间,3=状态+时间
+		int32_t			pageindex;		// 页码 (>0)
+		int32_t			pagenumber;		// 数量 (>5 && <100)
+		int32_t			status;			// 参考 _cgys_return_data_view_info
+		TIMESTAMP		timebegin;		// 起始时间
+		TIMESTAMP		timeend;		// 结束时间
+	};
+
+	struct _cgys_bx_submit_view_sn
+	{
+		_cgys_bx_submit_view_sn()
+		{
+			memset(this, 0, sizeof(_cgys_bx_submit_view_sn));
+			return;
+		};
+
+		int64_t			sn;					// 借款 UID
+	};
+
+	// 请求结构
+	struct stUserRequestCgysRoutineManagerCmd : public Msg
+	{
+		stUserRequestCgysRoutineManagerCmd()
+		{
+			dwType = USER_REQUEST_CGYS_ROUTINE_PARA;
+			stLength = sizeof(stUserRequestCgysRoutineManagerCmd);
+
+			subtype = 0;
+			return;
+		};
+
+		int16_t							subtype;			// 控制码
+		uint32_t						index;				// 位置
+
+		// 联合结构体
+#ifdef _union_struct
+#if e_msg_cgys_bx_create
+		_cgys_bx_submit_document		data;
+#elif e_msg_cgys_bx_ratify
+		_cgys_bx_submit_ratify			data;
+#elif e_msg_cgys_bx_chargeback
+		_cgys_bx_submit_chargeback		data;
+#elif e_msg_cgys_bx_view_all
+		_cgys_bx_submit_view_all		data;
+#elif e_msg_cgys_bx_view_name
+		_cgys_bx_submit_view_name		data;
+#elif e_msg_cgys_bx_view_uid
+		_cgys_bx_submit_view_sn			data;
+#endif
+#endif		
+	};
+
+	// 采购运输 报销 反馈
+	struct _cgys_bx_return_status_info
+	{
+		_cgys_bx_return_status_info()
+		{
+			memset(this, 0, sizeof(_cgys_bx_return_status_info));
+		};
+
+		bool_t				state;		// 状态 1=成功 0=失败
+		int32_t				errcode;	// 错误代码
+		wchar_t				text[128];	// 附加字符串
+	};
+
+	struct _cgys_bx_return_data_view_info
+	{
+		_cgys_bx_return_data_view_info()
+		{
+			memset(this, 0, sizeof(_cgys_bx_return_data_view_info));
+			return;
+		};
+
+		int64_t			sn;					// UID			采购单
+		int64_t			a_sn;				// UID			账户
+		int32_t			status;				// 状态			0=停用/退单;1=报销申请;2=同意;3=拒绝;
+		wchar_t			name[64];			// 报销人
+		wchar_t			method[20];			// 类目
+		wchar_t			excerpt[30];		// 摘要	
+		float_t			amount;				// 金额
+		wchar_t			notes[200];			// 备注
+		TIMESTAMP		createtime;			// 借款时间
+		TIMESTAMP		closetime;			// 审批时间
+	};
+
+	struct stServerReturnCgysRoutineManagerCmd : public Msg
+	{
+		stServerReturnCgysRoutineManagerCmd()
+		{
+			dwType = RETURN_USER_CGYS_ROUTINE_MSG;
+			stLength = sizeof(stServerReturnCgysRoutineManagerCmd);
+
+			subtype = 0;
+			index = 0;
+			return;
+		};
+
+		int16_t							subtype;			// 控制码
+		uint32_t						index;				// 位置
+
+		// 联合结构体
+#ifdef _union_struct
+#if	  e_msg_cgys_bx_status
+		_cgys_bx_return_status_info		data;
+#elif e_msg_cgys_bx_create
+		_cgys_bx_submit_document		data;
+#elif e_msg_cgys_bx_ratify
+		_cgys_bx_submit_ratify			data;
+#elif e_msg_cgys_bx_chargeback
+		_cgys_bx_submit_chargeback		data;
+#elif e_msg_cgys_bx_view_all
+		_cgys_bx_submit_view_all		data;
+#elif e_msg_cgys_bx_view_name
+		_cgys_bx_submit_view_name		data;
+#elif e_msg_cgys_bx_view_uid
+		_cgys_bx_submit_view_sn			data;
+#endif
+#endif
+	};
+
+
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 权限检查
@@ -1021,6 +1228,8 @@ namespace KyushuServer
 		AUTH_CGYS_W,			// 采购运输 使用
 		AUTH_CGYS_JK_R,			// 采购运输 借/还款 查看
 		AUTH_CGYS_JK_W,			// 采购运输 借/还款 使用
+		AUTH_CGYS_BX_R,			// 采购运输 报销 查看
+		AUTH_CGYS_BX_W,			// 采购运输 报销 使用
 	};
 #define CheckUserCgysAuth(n)			GetValueBit(m_user_info.r_cgys, n)
 

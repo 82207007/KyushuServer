@@ -544,6 +544,7 @@ namespace KyushuServer
 		int64_t			a_sn;				// 保留 (账户 UID)
 		wchar_t			ticketnumber[32];	// 票号
 		wchar_t			supplier[120];		// 供货商
+		wchar_t			contacts[64];		// 供货商 联系人
 		wchar_t			supplierphone[32];	// 供货商电话
 		wchar_t			classify[10];		// 分类
 		float_t			unitprice;			// 单价
@@ -716,7 +717,8 @@ namespace KyushuServer
 		int64_t			a_sn;				// UID			账户
 		int32_t			status;				// 状态			0=停用(退单),1=填单,2=装车,3=卸车
 		wchar_t			ticketnumber[32];	// 票号			(>8)
-		wchar_t			supplier[120];		// 供货商		
+		wchar_t			supplier[120];		// 供货商
+		wchar_t			contacts[64];		// 供货商联系人
 		wchar_t			supplierphone[32];	// 供货商电话
 		wchar_t			classify[10];		// 分类
 		float_t			unitprice;			// 单价
@@ -1158,7 +1160,7 @@ namespace KyushuServer
 			return;
 		};
 
-		int64_t			sn;					// UID			采购单
+		int64_t			sn;					// UID			报销单
 		int64_t			a_sn;				// UID			账户
 		int32_t			status;				// 状态			0=停用/退单;1=报销申请;2=同意;3=拒绝;
 		wchar_t			name[64];			// 报销人
